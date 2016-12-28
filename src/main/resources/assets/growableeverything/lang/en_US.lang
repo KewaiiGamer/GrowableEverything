@@ -1,0 +1,5 @@
+misc.grow.info=May grow: %s
+
+item.ItemScientificSeed.name=Scientific Seed
+
+tile.BlockScientificCrop.name=Scientific Seed

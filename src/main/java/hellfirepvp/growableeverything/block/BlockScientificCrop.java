@@ -1,23 +1,35 @@
 package hellfirepvp.growableeverything.block;
 
 import com.google.common.collect.Lists;
+import hellfirepvp.growableeverything.GrowableEverything;
+import hellfirepvp.growableeverything.block.tile.TileScientificCrop;
+import hellfirepvp.growableeverything.item.ItemScientificSeed;
+import hellfirepvp.growableeverything.lib.Items;
 import net.minecraft.block.Block;
-import net.minecraft.block.BlockCrops;
 import net.minecraft.block.IGrowable;
 import net.minecraft.block.SoundType;
 import net.minecraft.block.material.Material;
 import net.minecraft.block.properties.PropertyInteger;
 import net.minecraft.block.state.BlockStateContainer;
 import net.minecraft.block.state.IBlockState;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Blocks;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
+import net.minecraftforge.common.EnumPlantType;
 import net.minecraftforge.common.ForgeHooks;
+import net.minecraftforge.common.IPlantable;
 
+import javax.annotation.Nullable;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 /**
@@ -28,9 +40,12 @@ import java.util.Random;
  * <p>
  * Created by HellFirePvP @ 28.12.2016 19:15
  */
-public class BlockScientificCrop extends Block implements IGrowable {
+public class BlockScientificCrop extends Block implements IGrowable, IPlantable {
+
+    private static Map<IBlockState, ItemStack> specificDropMapping = new HashMap<IBlockState, ItemStack>();
 
     public static final PropertyInteger AGE = PropertyInteger.create("age", 0, 7);
+    private static final Random rand = new Random();
 
     public BlockScientificCrop() {
         super(Material.PLANTS);
@@ -38,11 +53,86 @@ public class BlockScientificCrop extends Block implements IGrowable {
         this.setHardness(0.0F);
         this.setSoundType(SoundType.PLANT);
         this.disableStats();
+        this.setDefaultState(this.blockState.getBaseState().withProperty(AGE, 0));
+    }
+
+    @Override
+    public boolean hasTileEntity(IBlockState state) {
+        return true;
+    }
+
+    @Override
+    public boolean hasTileEntity() {
+        return true;
+    }
+
+    @Nullable
+    @Override
+    public TileEntity createTileEntity(World world, IBlockState state) {
+        return new TileScientificCrop();
+    }
+
+    @Override
+    public void onBlockHarvested(World worldIn, BlockPos pos, IBlockState state, EntityPlayer player) {
+        TileScientificCrop crop = getCropTile(worldIn, pos);
+        if(crop != null) {
+            ItemStack container = crop.getSeedItemStack();
+            if(!container.isEmpty()) {
+                specificDropMapping.put(state, container);
+            }
+        }
+    }
+
+    @Override
+    public ItemStack getPickBlock(IBlockState state, RayTraceResult target, World world, BlockPos pos, EntityPlayer player) {
+        TileScientificCrop crop = getCropTile(world, pos);
+        if(crop != null) {
+            ItemStack container = crop.getSeedItemStack();
+            if(!container.isEmpty()) {
+                ItemStack pick = new ItemStack(Items.itemSeed);
+                ItemScientificSeed.setCropItem(pick, container);
+                return pick;
+            }
+        }
+        return ItemStack.EMPTY;
     }
 
     @Override
     public List<ItemStack> getDrops(IBlockAccess world, BlockPos pos, IBlockState state, int fortune) {
-        return Lists.newArrayList();
+        ItemStack preSpecified = specificDropMapping.get(state);
+        if(preSpecified == null) {
+            TileScientificCrop crop = getCropTile(world, pos);
+            if(crop == null || crop.getSeedItemStack().isEmpty()) {
+                return Lists.newArrayList(new ItemStack(net.minecraft.init.Items.WHEAT_SEEDS));
+            } else {
+                preSpecified = crop.getSeedItemStack();
+            }
+        }
+        if(preSpecified == null) {
+            return Lists.newArrayList(new ItemStack(net.minecraft.init.Items.WHEAT_SEEDS));
+        }
+
+        List<ItemStack> out = Lists.newArrayList();
+        ItemStack seed = new ItemStack(Items.itemSeed);
+        ItemScientificSeed.setCropItem(seed, preSpecified);
+        out.add(seed);
+        if(getAge(state) >= getMaxAge()) {
+            out.add(preSpecified);
+            if(GrowableEverything.dropAdditionalSeeds && rand.nextInt(GrowableEverything.chanceForSeed) == 0) {
+                out.add(seed.copy());
+            }
+        }
+        return out;
+    }
+
+    @Override
+    public int quantityDropped(Random random) {
+        return 0;
+    }
+
+    @Override
+    public Item getItemDropped(IBlockState state, Random rand, int fortune) {
+        return net.minecraft.init.Items.AIR;
     }
 
     @Override
@@ -65,20 +155,33 @@ public class BlockScientificCrop extends Block implements IGrowable {
         if(!isValidAtPosition(worldIn, pos)) {
             this.dropBlockAsItem(worldIn, pos, state, 0);
             worldIn.setBlockState(pos, Blocks.AIR.getDefaultState(), 3);
-        } else {
-            if (worldIn.getLightFromNeighbors(pos.up()) >= 9) {
-                int i = this.getAge(state);
+            return;
+        }
+        TileScientificCrop crop = getCropTile(worldIn, pos);
+        if(crop == null || crop.getSeedItemStack().isEmpty()) {
+            this.dropBlockAsItem(worldIn, pos, state, 0);
+            worldIn.setBlockState(pos, Blocks.AIR.getDefaultState(), 3);
+            return;
+        }
+        if (worldIn.getLightFromNeighbors(pos.up()) >= 9) {
+            int i = this.getAge(state);
 
-                if (i < this.getMaxAge()) {
+            if (i < this.getMaxAge()) {
 
-                    float change = getGrowthChance(this, worldIn, pos);
-                    if(ForgeHooks.onCropsGrowPre(worldIn, pos, state, rand.nextInt((int)(25.0F / change) + 1) == 0)) {
-                        worldIn.setBlockState(pos, getDefaultState().withProperty(AGE, i + 1), 3);
-                        ForgeHooks.onCropsGrowPost(worldIn, pos, state, worldIn.getBlockState(pos));
-                    }
+                float change = getGrowthChance(this, worldIn, pos);
+                if(ForgeHooks.onCropsGrowPre(worldIn, pos, state, rand.nextInt((int)(25.0F / change) + 1) == 0)) {
+                    worldIn.setBlockState(pos, getDefaultState().withProperty(AGE, i + 1), 3);
+                    ForgeHooks.onCropsGrowPost(worldIn, pos, state, worldIn.getBlockState(pos));
                 }
             }
         }
+    }
+
+    @Nullable
+    public static TileScientificCrop getCropTile(IBlockAccess world, BlockPos pos) {
+        TileEntity crop = world.getTileEntity(pos);
+        if(crop == null || !(crop instanceof TileScientificCrop)) return null;
+        return (TileScientificCrop) crop;
     }
 
     private static float getGrowthChance(Block blockIn, World worldIn, BlockPos pos) {
@@ -90,7 +193,7 @@ public class BlockScientificCrop extends Block implements IGrowable {
                 float f1 = 0.0F;
                 IBlockState iblockstate = worldIn.getBlockState(blockpos.add(x, 0, z));
 
-                if (iblockstate.getBlock().canSustainPlant(iblockstate, worldIn, blockpos.add(x, 0, z), net.minecraft.util.EnumFacing.UP, (net.minecraftforge.common.IPlantable)blockIn)) {
+                if (iblockstate.getBlock().canSustainPlant(iblockstate, worldIn, blockpos.add(x, 0, z), net.minecraft.util.EnumFacing.UP, (net.minecraftforge.common.IPlantable) blockIn)) {
                     f1 = 1.0F;
 
                     if (iblockstate.getBlock().isFertile(worldIn, blockpos.add(x, 0, z))) {
@@ -161,6 +264,16 @@ public class BlockScientificCrop extends Block implements IGrowable {
         }
 
         worldIn.setBlockState(pos, getDefaultState().withProperty(AGE, i), 3);
+    }
+
+    @Override
+    public EnumPlantType getPlantType(IBlockAccess world, BlockPos pos) {
+        return EnumPlantType.Crop;
+    }
+
+    @Override
+    public IBlockState getPlant(IBlockAccess world, BlockPos pos) {
+        return getDefaultState();
     }
 
 }

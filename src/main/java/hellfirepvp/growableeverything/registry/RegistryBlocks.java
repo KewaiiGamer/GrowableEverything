@@ -2,6 +2,7 @@ package hellfirepvp.growableeverything.registry;
 
 import hellfirepvp.growableeverything.GrowableEverything;
 import hellfirepvp.growableeverything.block.BlockScientificCrop;
+import hellfirepvp.growableeverything.block.tile.TileScientificCrop;
 import net.minecraft.block.Block;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraftforge.fml.common.registry.GameRegistry;
@@ -23,7 +24,7 @@ public class RegistryBlocks {
     }
 
     public static void initTiles() {
-
+        registerTile(TileScientificCrop.class);
     }
 
     private static void registerTile(Class<? extends TileEntity> teClass) {
