@@ -1,5 +1,7 @@
 package hellfirepvp.growableeverything;
 
+import hellfirepvp.growableeverything.registry.RegistryBlocks;
+import hellfirepvp.growableeverything.registry.RegistryItems;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
@@ -27,7 +29,9 @@ public class GrowableEverything {
 
     @Mod.EventHandler
     public void preInit(FMLPreInitializationEvent event) {
-
+        RegistryBlocks.init();
+        RegistryBlocks.initTiles();
+        RegistryItems.init();
     }
 
     @Mod.EventHandler
@@ -37,7 +41,7 @@ public class GrowableEverything {
 
     @Mod.EventHandler
     public void postInit(FMLPostInitializationEvent event) {
-        
+
     }
 
 }
