@@ -1,0 +1,16 @@
+[
+{
+  "modid": "growableeverything",
+  "name": "GrowableEverything",
+  "description": "A seed mod for ALL the things.",
+  "version": "${version}",
+  "mcversion": "${mcversion}",
+  "url": "",
+  "updateUrl": "",
+  "authorList": ["HellFirePvP"],
+  "credits": "Shadows for other ridiculous seed-mods",
+  "logoFile": "",
+  "screenshots": [],
+  "dependencies": []
+}
+]
