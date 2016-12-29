@@ -5,6 +5,7 @@ import hellfirepvp.growableeverything.registry.RegistryItems;
 import hellfirepvp.growableeverything.registry.RegistryRecipes;
 import net.minecraftforge.common.config.Configuration;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.SidedProxy;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
@@ -23,14 +24,17 @@ public class GrowableEverything {
     public static final String MODID = "growableeverything";
     public static final String NAME = "GrowableEverything";
     public static final String VERSION = "0.1-indev";
-    public static final String CLIENT_PROXY = "hellfirepvp.astralsorcery.client.ClientProxy";
-    public static final String COMMON_PROXY = "hellfirepvp.astralsorcery.common.CommonProxy";
+    public static final String CLIENT_PROXY = "hellfirepvp.growableeverything.client.ClientProxy";
+    public static final String COMMON_PROXY = "hellfirepvp.growableeverything.CommonProxy";
 
     public static int chanceForSeed;
     public static boolean dropAdditionalSeeds;
 
     @Mod.Instance(MODID)
     public static GrowableEverything instance;
+
+    @SidedProxy(clientSide = CLIENT_PROXY, serverSide = COMMON_PROXY, modId = MODID)
+    public static CommonProxy proxy;
 
     @Mod.EventHandler
     public void preInit(FMLPreInitializationEvent event) {
@@ -52,7 +56,7 @@ public class GrowableEverything {
 
     @Mod.EventHandler
     public void init(FMLInitializationEvent event) {
-
+        proxy.initRendering();
     }
 
     @Mod.EventHandler

@@ -6,6 +6,7 @@ import hellfirepvp.growableeverything.block.tile.TileScientificCrop;
 import hellfirepvp.growableeverything.item.ItemScientificSeed;
 import hellfirepvp.growableeverything.lib.Items;
 import net.minecraft.block.Block;
+import net.minecraft.block.BlockCrops;
 import net.minecraft.block.IGrowable;
 import net.minecraft.block.SoundType;
 import net.minecraft.block.material.Material;
@@ -17,6 +18,8 @@ import net.minecraft.init.Blocks;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.BlockRenderLayer;
+import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.RayTraceResult;
@@ -25,6 +28,8 @@ import net.minecraft.world.World;
 import net.minecraftforge.common.EnumPlantType;
 import net.minecraftforge.common.ForgeHooks;
 import net.minecraftforge.common.IPlantable;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
 
 import javax.annotation.Nullable;
 import java.util.HashMap;
@@ -42,7 +47,15 @@ import java.util.Random;
  */
 public class BlockScientificCrop extends Block implements IGrowable, IPlantable {
 
-    private static Map<IBlockState, ItemStack> specificDropMapping = new HashMap<IBlockState, ItemStack>();
+    private static Map<BlockPos, ItemStack> specificDropMapping = new HashMap<BlockPos, ItemStack>();
+
+    private static final AxisAlignedBB bb0 =  new AxisAlignedBB(4D / 16D, 0D, 4D / 16D, 12D / 16D,  4D / 16D, 12D / 16D);
+    private static final AxisAlignedBB bb1 =  new AxisAlignedBB(3D / 16D, 0D, 3D / 16D, 13D / 16D,  6D / 16D, 13D / 16D);
+    private static final AxisAlignedBB bb2 =  new AxisAlignedBB(2D / 16D, 0D, 2D / 16D, 14D / 16D,  7D / 16D, 14D / 16D);
+    private static final AxisAlignedBB bb3 =  new AxisAlignedBB(2D / 16D, 0D, 2D / 16D, 14D / 16D, 12D / 16D, 14D / 16D);
+    private static final AxisAlignedBB bb4 =  new AxisAlignedBB(2D / 16D, 0D, 2D / 16D, 14D / 16D, 14D / 16D, 14D / 16D);
+    private static final AxisAlignedBB bb5 =  new AxisAlignedBB(1D / 16D, 0D, 1D / 16D, 15D / 16D, 15D / 16D, 15D / 16D);
+    private static final AxisAlignedBB bb67 = new AxisAlignedBB(1D / 16D, 0D, 1D / 16D, 15D / 16D, 16D / 16D, 15D / 16D);
 
     public static final PropertyInteger AGE = PropertyInteger.create("age", 0, 7);
     private static final Random rand = new Random();
@@ -78,7 +91,7 @@ public class BlockScientificCrop extends Block implements IGrowable, IPlantable 
         if(crop != null) {
             ItemStack container = crop.getSeedItemStack();
             if(!container.isEmpty()) {
-                specificDropMapping.put(state, container);
+                specificDropMapping.put(pos, container);
             }
         }
     }
@@ -99,7 +112,8 @@ public class BlockScientificCrop extends Block implements IGrowable, IPlantable 
 
     @Override
     public List<ItemStack> getDrops(IBlockAccess world, BlockPos pos, IBlockState state, int fortune) {
-        ItemStack preSpecified = specificDropMapping.get(state);
+        ItemStack preSpecified = specificDropMapping.get(pos);
+        specificDropMapping.remove(pos);
         if(preSpecified == null) {
             TileScientificCrop crop = getCropTile(world, pos);
             if(crop == null || crop.getSeedItemStack().isEmpty()) {
@@ -123,6 +137,66 @@ public class BlockScientificCrop extends Block implements IGrowable, IPlantable 
             }
         }
         return out;
+    }
+
+    @Override
+    public void neighborChanged(IBlockState state, World worldIn, BlockPos pos, Block blockIn, BlockPos fromPos) {
+        super.neighborChanged(state, worldIn, pos, blockIn, fromPos);
+        if(!isValidAtPosition(worldIn, pos)) {
+            this.dropBlockAsItem(worldIn, pos, state, 0);
+            worldIn.setBlockState(pos, Blocks.AIR.getDefaultState(), 3);
+            return;
+        }
+        TileScientificCrop crop = getCropTile(worldIn, pos);
+        if(crop == null || crop.getSeedItemStack().isEmpty()) {
+            this.dropBlockAsItem(worldIn, pos, state, 0);
+            worldIn.setBlockState(pos, Blocks.AIR.getDefaultState(), 3);
+        }
+    }
+
+    @Override
+    public AxisAlignedBB getBoundingBox(IBlockState state, IBlockAccess source, BlockPos pos) {
+        int age = state.getValue(AGE);
+        switch (age) {
+            case 0:
+                return bb0;
+            case 1:
+                return bb1;
+            case 2:
+                return bb2;
+            case 3:
+                return bb3;
+            case 4:
+                return bb4;
+            case 5:
+                return bb5;
+            case 6:
+            case 7:
+                return bb67;
+        }
+        return FULL_BLOCK_AABB;
+    }
+
+    @Nullable
+    @Override
+    public AxisAlignedBB getCollisionBoundingBox(IBlockState blockState, IBlockAccess worldIn, BlockPos pos) {
+        return NULL_AABB;
+    }
+
+    @Override
+    public boolean isOpaqueCube(IBlockState state) {
+        return false;
+    }
+
+    @Override
+    public boolean isFullCube(IBlockState state) {
+        return false;
+    }
+
+    @Override
+    @SideOnly(Side.CLIENT)
+    public BlockRenderLayer getBlockLayer() {
+        return BlockRenderLayer.CUTOUT;
     }
 
     @Override

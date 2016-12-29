@@ -1,0 +1,6 @@
+{
+  "parent": "block/cross",
+  "textures": {
+    "cross": "growableeverything:blocks/crop_4"
+  }
+}
